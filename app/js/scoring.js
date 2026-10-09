@@ -54,12 +54,15 @@ const UNITS = [[68, '無量大数'], [64, '不可思議'], [60, '那由他'], [5
 // Milestones below 万 are celebrated but not used as display units.
 const MILESTONES = [[3, '千'], [2, '百']];
 
+// Russian display uses powers of 1,000; milestone identities stay stable.
 export function fmtDopa(L) {
   if (!Number.isFinite(L) || L >= 72) return '∞';
-  if (L < 4) return Math.round(10 ** L).toLocaleString('ja-JP');
-  const u = UNITS.find(([e]) => L >= e - 1e-9);
-  const m = 10 ** (L - u[0]);
-  return (m < 10 ? m.toFixed(1) : String(Math.floor(m))) + u[1];
+  if (L < 4) return Math.round(10 ** L).toLocaleString('ru-RU');
+  const e = Math.floor((L + 1e-9) / 3) * 3;
+  const value = 10 ** (L - e);
+  const suffix = { 3: 'тыс.', 6: 'млн', 9: 'млрд', 12: 'трлн' }[e];
+  if (!suffix) return `${value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} × 10^${e}`;
+  return `${value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${suffix}`;
 }
 
 export function unitOf(L) {
@@ -70,5 +73,9 @@ export function unitOf(L) {
   return u ? u[1] : '';
 }
 
-const LABELS = { '∞': '∞', 百: '100', 千: '1000', 十万: '10万', 百万: '100万', 千万: '1000万' };
-export const unitLabel = (u) => LABELS[u] || `1${u}`;
+export function unitLabel(u) {
+  if (u === '∞') return u;
+  const special = { 百: 2, 千: 3, 十万: 5, 百万: 6, 千万: 7 };
+  const exponent = special[u] ?? UNITS.find(([, name]) => name === u)?.[0];
+  return exponent == null ? '' : exponent < 10 ? (10 ** exponent).toLocaleString('ru-RU') : `10^${exponent}`;
+}
